@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniDropbox</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(45deg, #0d47a1, #1976d2); 
+            color: white;
+            padding: 1.5em 2em;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5em;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.6em;
+            text-align: center;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2em auto;
+            padding: 1em;
+            flex-grow: 1;
+        }
+        .card {
+            background: #fff;
+            padding: 1.5em;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08); 
+            border: 1px solid #e0e0e0;
+            margin-bottom: 1.5em;
+        }
+        h2 {
+            color: #222;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5em;
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+        form {
+            display: flex;
+            gap: 1em;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input[type="file"] {
+            flex-grow: 1;
+            padding: 0.5em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.8em 1.5em;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        button:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+            transform: none;
+        }
+        button#list-files-button {
+            background: #007bff;
+        }
+        button#list-files-button:hover {
+            background-color: #0056b3;
+        }
+        .status-message {
+            margin-top: 1em;
+            padding: 0.8em;
+            border-radius: 4px;
+            color: #333;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+        }
+        .status-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .status-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        #file-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1em;
+            margin-top: 1em;
+        }
+        #file-list li {
+            background: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1em;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 180px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #file-list li.placeholder {
+            color: #888;
+            font-style: italic;
+            grid-column: 1 / -1;
+            box-shadow: none;
+        }
+        #file-list a.file-link {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+            margin-top: 0.5em;
+            word-break: break-all;
+            display: block;
+        }
+        #file-list a.file-link:hover {
+            text-decoration: underline;
+        }
+        #file-list .file-icon {
+            font-size: 4em;
+            margin-bottom: 0.2em;
+            opacity: 0.7;
+        }
+        #file-list .file-actions {
+            margin-top: 1em;
+            display: flex;
+            gap: 0.5em;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #file-list .file-actions button {
+            padding: 0.5em 1em;
+            font-size: 0.8em;
+            background-color: #6c757d;
+        }
+        #file-list .file-actions button:hover {
+            background-color: #5a6268;
+        }
+        #file-list .file-actions button.view-button {
+            background-color: #007bff;
+        }
+        #file-list .file-actions button.view-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            padding-top: 60px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+        .lightbox-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+        #img01, #vid01 { display: none; }
+        #caption {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            text-align: center;
+            color: #ccc;
+            padding: 10px 0;
+            height: 150px;
+        }
+        .close-lightbox {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .close-lightbox:hover,
+        .close-lightbox:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Drop Zone */
+        .card#drop-zone {
+            border: 2px dashed #d0d0d0;
+            background: #fafafa;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .card#drop-zone p {
+            text-align: center;
+            color: #888;
+            font-size: 1.1em;
+            margin: 0.5em 0;
+        }
+        .card#drop-zone.drag-over {
+            border-color: #0d47a1;
+            background: #eef2f6;
+        }
+
+        /* Test Panel */
+        #start-test-button {
+             background-color: #28a745;
+        }
+        #start-test-button:hover {
+             background-color: #218838;
+        }
+        #stop-test-button {
+             background-color: #dc3545;
+        }
+        #stop-test-button:hover {
+             background-color: #c82333;
+        }
+        #cluster-stats-table {
+            width: 100%; 
+            border-collapse: collapse; 
+            text-align: left;
+            margin-top: 1em;
+        }
+        #cluster-stats-table th, #cluster-stats-table td {
+            padding: 12px; 
+            border: 1px solid #ddd;
+        }
+        #cluster-stats-table thead tr {
+            background-color: #f4f7f6;
+        }
+        #cluster-stats-body td:nth-child(2), #cluster-stats-body td:nth-child(3) {
+            text-align: right;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 2em;
+            padding: 1em;
+            background: #333;
+            color: white;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .container {
+                margin: 1em auto;
+                padding: 0.5em;
+            }
+            header h1 {
+                font-size: 1.5em;
+            }
+            form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #file-list {
+                grid-template-columns: 1fr;
+            }
+            .lightbox-content {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📦 MiniDropbox</h1>
+    </header>
+
+    <div class="container">
+        
+        <div class="card" id="drop-zone"> 
+            <h2>Upload de Arquivos</h2>
+            <form id="upload-form">
+                <input type="file" id="file-input" required>
+                <button type="submit">Enviar Arquivo</button>
+            </form>
+            <p>...ou arraste e solte o arquivo aqui.</p>
+            <div id="upload-status" class="status-message"></div>
+        </div>
+
+        <div class="card">
+            <h2>Meus Arquivos</h2>
+            <button id="list-files-button">Atualizar Lista</button>
+            <ul id="file-list">
+                <li class="placeholder">Carregando arquivos...</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Dashboard do Cluster</h2>
+            <p>Inicie o teste para "bombardear" o backend com requisições contínuas e observar o balanceamento de carga e a latência em tempo real.</p>
+            
+            <div class="button-group" style="margin-bottom: 1.5em; display: flex; gap: 1em;">
+                <button id="start-test-button">▶ Iniciar Teste</button>
+                <button id="stop-test-button" disabled>■ Parar Teste</button>
+            </div>
+            
+            <table id="cluster-stats-table">
+                <thead>
+                    <tr>
+                        <th>Servidor (Container ID)</th>
+                        <th>Nº de Requisições</th>
+                        <th>Latência Média (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="cluster-stats-body">
+                    </tbody>
+            </table>
+            <div id="load-test-status" class="status-message" style="display: none; margin-top: 1em;"></div>
+        </div>
+
+    </div>
+
+    
+    <div id="myLightbox" class="lightbox">
+        <span class="close-lightbox">&times;</span>
+        
+        <img class="lightbox-content" id="img01">
+        <video class="lightbox-content" id="vid01" controls></video>
+
+        <div id="caption"></div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 MiniDropbox.</p>
+    </footer>
+    
+    <script src="script.js"></script>
+</body>
+</html>

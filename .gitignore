@@ -1,0 +1,12 @@
+# Arquivos de Sistema e Cache
+__pycache__/
+*.pyc
+.DS_Store
+
+# Segredos do Ngrok
+# NUNCA envie este arquivo para o GitHub!
+ngrok.yml
+
+# Volumes do Docker (não devem ser versionados)
+postgres_data/
+minio_data/
